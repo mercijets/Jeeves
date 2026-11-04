@@ -24,12 +24,22 @@ RULES
    c) Give the result as an estimate with a tolerance, e.g. "approx. 5,450 ft (+/-150 ft, chart read)". Never imply more precision than the chart supports.
    d) If the conditions are outside the chart's plotted range, say so and give no value.
    e) Label it "Chart-read estimate. Verify against AFM Section IV or your approved performance calculator."
-9. FORMAT (Slack). Be brief. Use this shape and nothing else:
-   Line 1: the answer itself, with the key value(s) in *bold* and a citation. If serial groups differ, line 1 is "*Verify which serial number you are flying.*" followed by one line per group.
-   Then: the exact limitation/procedure wording as bullets (verbatim, cited). Only what answers the question.
-   Then, only if any TC, supplement or Chief Pilot note applies: one short line each.
-   Then, if any study-aid source addresses the question: a line "_Study aids (advisory, not controlling):_" followed by at most 3 short bullets: source name, its wording, and "agrees" or "differs: controlling value is X".
-   Target 120 words or fewer, not counting verbatim procedure steps. No introductions, no restating the question, no explaining what a source is NOT, no closing summary, no advice to "check the AFM" (the app adds that).
+9. FORMAT (Slack). Be brief, but ALWAYS give the actual content: the values, limits or steps the pilot asked for. A reply that only says to verify the serial number is never acceptable.
+   Shape:
+   (a) First line: the direct answer with key value(s) in *bold*, cited. For a broad question ("APU limitations"), the first line is a one-line summary, e.g. "*APU limitations, AFM Section II:*".
+   (b) The exact limitation/procedure wording as bullets, verbatim and cited. Include every limit that answers the question; nothing else.
+   (c) Only if serial groups actually differ for a value: put "*Verify which serial number you are flying.*" right above the differing item, then one bullet per group. If groups do not differ, do not mention serial numbers at all.
+   (d) Only if a TC, supplement or Chief Pilot note applies: one short line each.
+   (e) If any study-aid source addresses the question: "_Study aids (advisory, not controlling):_" then at most 3 short bullets: source name, its key wording, and "agrees" or "differs: controlling value is X".
+   Aim for 150 words or fewer excluding verbatim limit/procedure text. No introductions, no restating the question, no explaining what a source is NOT, no closing summary, no advice to "check the AFM" (the app adds that).
+
+   EXAMPLE of the shape (values invented, do not reuse):
+   *Max APU starting altitude: 30,000 ft* [1]
+   • "APU starting is approved up to 30,000 feet." [1]
+   • "Maximum APU generator load: 300 amps." [1]
+   TC-R02-99 replaces p 2-410-1 for the generator load. [2]
+   _Study aids (advisory, not controlling):_
+   • FSI Pilot Guide: "APU start up to FL300" — agrees [4]
 10. Do not add a disclaimer footer; the app adds one.`;
 
 export interface Answer { text: string; used: Source[] }
@@ -77,6 +87,23 @@ ${s.text}`;
   const convo = history.length ? `Earlier in this thread:\n${history.join("\n")}\n\n` : "";
   blocks.push({ type: "text", text: `${convo}${serialLine}\n\nQUESTION: ${question}` });
 
+  const messages: any[] = [{ role: "user", content: blocks }];
+  let { text, stop } = await callClaude(env, messages);
+
+  // Safety check: a thin reply (e.g. only "verify serial number") or a cut-off reply is regenerated once.
+  const substantive = text.replace(/\*?Verify which serial number you are flying\.?\*?/gi, "").replace(/\[\d+\]/g, "").trim();
+  if (stop === "max_tokens" || substantive.length < 60 || !/\[\d+\]/.test(text)) {
+    console.log(`thin answer (stop=${stop}, ${substantive.length} chars), regenerating`);
+    messages.push({ role: "assistant", content: text || "(empty)" });
+    messages.push({ role: "user", content: "That reply was incomplete. Answer the question in full using the required shape: the actual values/limits/steps from the sources, verbatim and cited, kept concise." });
+    ({ text } = await callClaude(env, messages));
+  }
+
+  const cited = new Set([...text.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
+  return { text, used: sources.filter((s) => cited.has(s.n)) };
+}
+
+async function callClaude(env: Env, messages: any[]): Promise<{ text: string; stop: string }> {
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -84,19 +111,12 @@ ${s.text}`;
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      model: env.ANSWER_MODEL,
-      max_tokens: 1000,
-      system: SYSTEM,
-      messages: [{ role: "user", content: blocks }],
-    }),
+    body: JSON.stringify({ model: env.ANSWER_MODEL, max_tokens: 1600, system: SYSTEM, messages }),
   });
   if (!r.ok) throw new Error(`Claude API ${r.status}: ${(await r.text()).slice(0, 300)}`);
   const data: any = await r.json();
   const text = data.content.filter((c: any) => c.type === "text").map((c: any) => c.text).join("\n").trim();
-
-  const cited = new Set([...text.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
-  return { text, used: sources.filter((s) => cited.has(s.n)) };
+  return { text, stop: data.stop_reason };
 }
 
 function arrayBufferToBase64(buf: ArrayBuffer): string {
