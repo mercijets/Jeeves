@@ -1,0 +1,5 @@
+pymupdf>=1.24
+requests>=2.32
+boto3>=1.35
+google-api-python-client>=2.140
+google-auth>=2.34

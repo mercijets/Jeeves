@@ -1,0 +1,42 @@
+# Jeeves release test set. Jeeves is not released to crews until it passes all of these.
+# Each expected answer must be verified by the Chief Pilot or a check airman against the
+# current AFM before it is trusted. Rows marked verified: false are drafts.
+#
+# Run: python -m evals.run (after deploy) — compares answers to `must_include` and checks citations.
+
+- id: lim-ramp-weight-high
+  question: "What is the maximum ramp weight for SN 0350?"
+  must_include: ["36,400"]
+  must_cite_page: "2-110-2"
+  verified: false   # value read from AFM 75FMA Rev 02 p 2-110-2 during ingest testing
+
+- id: lim-itt-tc33
+  question: "What are the engine ITT limits?"
+  must_cite_tc: "TC-R02-33"          # the TC replaces the printed page 2-210-1
+  must_not_cite_superseded: true
+  verified: false
+
+- id: tc-cancelled-not-quoted
+  question: "Main generator warning limits for SN 0250"
+  must_cite_tc_any: ["TC-R02-12", "TC-R02-13"]
+  must_not_cite_tc: ["TC-R02-01", "TC-R02-02"]   # cancelled TCs still printed inside Section II
+  verified: false
+
+- id: tire-speed
+  question: "Max tire ground speed?"
+  must_include: ["182"]
+  must_cite_tc: "TC-R02-61"
+  verified: false
+
+- id: serial-groups-shown
+  question: "What is the maximum takeoff weight?"
+  must_mention_verify_serial: true    # no tail given and groups differ -> show all groups
+  verified: false
+
+- id: not-in-library
+  question: "What is the oil capacity of a Gulfstream G550?"
+  must_include: ["didn't find"]
+  verified: true
+
+# Add ~45 more: limitations, memory items, CAS messages (exact strings), MEL items once the MEL
+# is loaded, supplement questions (TCAS, RVSM, EGPWS), and 10+ chart reads with hand-worked answers.

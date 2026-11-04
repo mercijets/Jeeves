@@ -1,0 +1,31 @@
+name = "jeeves"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ANSWER_MODEL = "claude-sonnet-5-5"
+PUBLIC_BASE_URL = "https://jeeves.mercijets.com"   # change if you use a different hostname
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "jeeves"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[vectorize]]
+binding = "VEC"
+index_name = "jeeves"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "jeeves-library"
+
+# Secrets (set with `npx wrangler secret put NAME`, never in this file):
+#   ANTHROPIC_API_KEY      Claude API key
+#   SLACK_SIGNING_SECRET   from the Slack app's Basic Information page
+#   SLACK_BOT_TOKEN        xoxb-... from OAuth & Permissions
+#   LINK_SECRET            any long random string; signs "View page" links
+#   API_TOKEN              any long random string; protects /api/ask and /mcp

@@ -1,0 +1,11 @@
+node_modules/
+.wrangler/
+dist/
+__pycache__/
+*.pyc
+out/
+lib/
+samples/
+.dev.vars
+*.json.key
+service-account*.json
