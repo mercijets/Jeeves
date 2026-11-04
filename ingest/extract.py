@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 import pymupdf
 
 AFM_PAGE_RE = re.compile(r"(?<![\d-])(\d{1,2}-\d{3}-\d{1,3}[A-Z]?)(?![\d-])")
-SUPP_PAGE_RE = re.compile(r"\b(S\d{1,2}-\d{1,3})\b")
+SUPP_PAGE_RE = re.compile(r"(?<![-\w])(S\d{1,2}-\d{1,3})\b")
 CONFIG_RE = re.compile(r"^\s*(A[A-Z])\s*$", re.M)
 TC_INLINE_RE = re.compile(r"75FMA\s+TC-(R\d{2}-\d{2})")
 TC_HEADER = "TEMPORARY FAA APPROVED AIRPLANE"

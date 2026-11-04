@@ -128,6 +128,7 @@ class CloudStore(Store):
 
     def _post(self, path, **kw):
         extra = kw.pop("headers", {})
+        last = ""
         for attempt in range(6):
             try:
                 r = requests.post(self.api + path, headers={**self.h, **extra}, timeout=180, **kw)
@@ -137,6 +138,10 @@ class CloudStore(Store):
                 time.sleep(2 ** attempt)
                 continue
             if r.status_code in (408, 429, 500, 502, 503, 504):
+                last = f"{r.status_code}: {r.text[:400]}"
+                # A used-up daily allowance will not recover by retrying; stop and say so.
+                if "allocation" in r.text.lower() or "quota" in r.text.lower() or "limit" in r.text.lower() and r.status_code == 429:
+                    raise RuntimeError(f"{path} -> {last}")
                 time.sleep(2 ** attempt)
                 continue
             if not r.ok:
@@ -145,7 +150,7 @@ class CloudStore(Store):
             if not body.get("success", True):
                 raise RuntimeError(f"{path} -> {body.get('errors')}")
             return body
-        raise RuntimeError(f"{path} kept failing")
+        raise RuntimeError(f"{path} kept failing; last response {last}")
 
     def _d1(self, sql: str, params=None):
         payload = {"sql": sql}
@@ -196,5 +201,5 @@ class CloudStore(Store):
                        data=body.encode(), headers={"Content-Type": "application/x-ndjson"})
 
     def vectors_delete(self, ids):
-        for i in range(0, len(ids), 500):
-            self._post(f"/vectorize/v2/indexes/{self.index}/delete_by_ids", json={"ids": ids[i:i + 500]})
+        for i in range(0, len(ids), 100):  # API maximum is 100 ids per call
+            self._post(f"/vectorize/v2/indexes/{self.index}/delete_by_ids", json={"ids": ids[i:i + 100]})
