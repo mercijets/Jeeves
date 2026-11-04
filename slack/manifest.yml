@@ -15,7 +15,7 @@ features:
     - command: /jeeves
       url: https://jeeves.mercijets.com/slack/commands
       description: Ask the Citation X library (only you see the answer)
-      usage_hint: "max crosswind takeoff N702FL"
+      usage_hint: "max crosswind takeoff SN 0350"
       should_escape: false
 oauth_config:
   scopes:

@@ -45,7 +45,7 @@ export default {
       if (url.pathname === "/mcp") return handleMcp(env, req);
       const { question } = await req.json<{ question: string }>();
       const r = await ask(env, { question, channel: "web" });
-      return Response.json({ answer: r.text, footer: FOOTER, aircraft: r.aircraft,
+      return Response.json({ answer: r.text, footer: FOOTER, serial: r.serial,
         sources: await Promise.all(r.sources.map(async (s) => ({ label: citeLabel(s), effectivity: s.effectivity, authority: s.authorityLabel, url: await pageLink(env, s) }))) });
     }
 

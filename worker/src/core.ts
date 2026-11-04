@@ -1,42 +1,36 @@
-// Shared pieces: the ask() pipeline, tail lookup, signed page links, logging.
-import type { Env, Aircraft } from "./types";
+// Shared pieces: the ask() pipeline, serial-number parsing, signed page links, logging.
+import type { Env, SerialContext } from "./types";
 import { retrieve, type Source } from "./retrieve";
 import { answer } from "./answer";
 
 export const FOOTER = "Reference aid only. Verify against the current AFM/QRH and company manuals.";
 
-export interface AskResult { text: string; sources: Source[]; aircraft: Aircraft | null; questionId: number | null }
+export interface AskResult { text: string; sources: Source[]; serial: SerialContext | null; questionId: number | null }
 
 export async function ask(env: Env, q: { question: string; channel: string; user?: string; access?: string[]; contextText?: string; history?: string[] }): Promise<AskResult> {
-  const aircraft = await findAircraft(env, `${q.question} ${q.contextText ?? ""}`);
+  const serial = parseSerial(q.question);
   const sources = await retrieve(env, q.question, { access: q.access ?? ["all", "pilots"] });
-  const a = await answer(env, q.question, sources, aircraft, q.history ?? []);
+  const a = await answer(env, q.question, sources, serial, q.history ?? []);
   const shown = a.used.length ? a.used : sources.slice(0, 3);
-  const questionId = await logQuestion(env, q.channel, q.user, aircraft?.tail ?? null, q.question, a.text, shown.map((s) => s.pageId));
-  return { text: a.text, sources: shown, aircraft, questionId };
+  const questionId = await logQuestion(env, q.channel, q.user, serial?.serial ?? null, q.question, a.text, shown.map((s) => s.pageId));
+  return { text: a.text, sources: shown, serial, questionId };
 }
 
-export async function findAircraft(env: Env, text: string): Promise<Aircraft | null> {
-  const tails = [...new Set((text.toUpperCase().match(/\bN\d{1,5}[A-Z]{0,2}\b/g) ?? []))];
-  for (const t of tails) {
-    const row = await env.DB.prepare("SELECT * FROM aircraft WHERE tail = ?").bind(t).first<Aircraft>();
-    if (row) return row;
-  }
-  const sn = text.match(/\b(?:SN|S\/N|SERIAL)\s*(?:750-)?0*(\d{1,3})\b/i);
-  if (sn) {
-    const n = Number(sn[1]);
-    const row = await env.DB.prepare("SELECT * FROM aircraft WHERE CAST(substr(serial, 5) AS INTEGER) = ?").bind(n).first<Aircraft>();
-    if (row) return row;
-    return { tail: `SN ${String(n).padStart(4, "0")}`, serial: `750-${String(n).padStart(4, "0")}`, serial_group: n >= 173 ? "HIGH" : "LOW?", notes: n < 173 ? "SB750-71-10 status unknown" : null };
-  }
-  return null;
+// Generic: if the pilot typed a Citation X serial, note its group using Cessna's ranges.
+// Nothing about any specific aircraft is stored or looked up.
+export function parseSerial(text: string): SerialContext | null {
+  const m = text.match(/\b(?:SN|S\/N|SERIAL(?:\s+NUMBER)?|750-)\s*#?\s*0*(\d{1,3})\b/i);
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (n < 1 || n > 500) return null;
+  return { serial: `750-${String(n).padStart(4, "0")}`, group: n >= 173 ? "HIGH" : "LOW_OR_LOW_SB" };
 }
 
-async function logQuestion(env: Env, channel: string, user: string | undefined, tail: string | null, question: string, text: string, cited: string[]): Promise<number | null> {
+async function logQuestion(env: Env, channel: string, user: string | undefined, serial: string | null, question: string, text: string, cited: string[]): Promise<number | null> {
   try {
     const r = await env.DB.prepare(
-      "INSERT INTO questions (asked_at, channel, user_ref, tail, question, answer, cited) VALUES (?,?,?,?,?,?,?) RETURNING id")
-      .bind(new Date().toISOString(), channel, user ?? null, tail, question, text, JSON.stringify(cited)).first<{ id: number }>();
+      "INSERT INTO questions (asked_at, channel, user_ref, serial, question, answer, cited) VALUES (?,?,?,?,?,?,?) RETURNING id")
+      .bind(new Date().toISOString(), channel, user ?? null, serial, question, text, JSON.stringify(cited)).first<{ id: number }>();
     return r?.id ?? null;
   } catch { return null; }
 }

@@ -12,4 +12,5 @@ export interface Env {
   API_TOKEN: string;
 }
 
-export interface Aircraft { tail: string; serial: string; serial_group: string; notes: string | null }
+// A serial number the pilot typed in the question (no fleet data is stored).
+export interface SerialContext { serial: string; group: "LOW_OR_LOW_SB" | "HIGH" }

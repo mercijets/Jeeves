@@ -1,15 +1,9 @@
 // Builds the answer from retrieved sources with Claude. Rules are strict:
 // sources only, verbatim limits/procedures, serial groups side by side, TCs win,
 // every claim cited, charts read with shown work and a tolerance.
-import type { Env, Aircraft } from "./types";
+import type { Env, SerialContext } from "./types";
 import type { Source } from "./retrieve";
 
-const SERIAL_TEXT: Record<string, string> = {
-  LOW: "SN 0001-0172 without SB750-71-10",
-  LOW_SB: "SN 0001-0172 with SB750-71-10",
-  HIGH: "SN 0173-0500",
-  "LOW?": "SN 0001-0172, SB750-71-10 status unknown: show both low-serial groups",
-};
 
 const SYSTEM = `You are Jeeves, the Citation X (Cessna 750) document reference for Merci Jets pilots.
 You answer ONLY from the numbered SOURCES provided. You never use outside knowledge about the airplane.
@@ -18,7 +12,7 @@ RULES
 1. Cite every fact with its source number in brackets, e.g. [3]. No uncited facts.
 2. Limitations, memory items, warnings, cautions and procedure steps: quote them word for word from the source. Do not paraphrase or summarize them.
 3. Temporary Changes (TCs) replace the AFM page they name. If a source is marked "SUPERSEDED BY TC-R02-xx", the TC wording controls. Show the TC value, and say which TC replaced the printed page.
-4. Serial numbers matter. The Citation X has serial groups that can differ (SN 0001-0172 without SB750-71-10, SN 0001-0172 with SB750-71-10, SN 0173-0500). When sources for different groups give different answers, show EVERY group side by side and label each one. Never silently pick one. If the question names a tail or serial, lead with the group that applies to it, then still show the other groups so the pilot sees the difference. If no tail is given and groups differ, say "Verify which serial number you are flying" and show all groups.
+4. Serial numbers matter. The Citation X has serial groups that can differ (SN 0001-0172 without SB750-71-10, SN 0001-0172 with SB750-71-10, SN 0173-0500). When sources for different groups give different answers, show EVERY group side by side and label each one. Never silently pick one. If the question names a serial number, say which group it falls in, then still show every group so the pilot sees the difference. If no serial is given and groups differ, say "Verify which serial number you are flying" and show all groups. Never assume which airplane the pilot is flying.
 5. Authority order when sources disagree: FAA-approved AFM/TC/Supplement > manufacturer reference > Merci Jets company documents > training/study aids. Company documents may be MORE restrictive than the AFM; when they are, show both. Never present a training/study aid as the controlling source for a limitation or procedure.
 6. Supplements apply only to airplanes with that equipment or registration. Say so when citing one.
 7. If the sources do not answer the question, say plainly: "I didn't find that in the library." Then name the closest thing you did find, if anything. Never guess.
@@ -33,7 +27,7 @@ RULES
 
 export interface Answer { text: string; used: Source[] }
 
-export async function answer(env: Env, question: string, sources: Source[], aircraft: Aircraft | null, history: string[] = []): Promise<Answer> {
+export async function answer(env: Env, question: string, sources: Source[], serial: SerialContext | null, history: string[] = []): Promise<Answer> {
   if (!sources.length) {
     return { text: "I didn't find that in the library. Try different wording, an exact CAS message, or an AFM page number.", used: [] };
   }
@@ -52,9 +46,11 @@ Applies to: ${s.effectivity}${flags ? `\n${flags}` : ""}
 ${s.text}`;
   }).join("\n\n=====\n\n");
 
-  const tailLine = aircraft
-    ? `The pilot is asking about ${aircraft.tail}, serial ${aircraft.serial} (${SERIAL_TEXT[aircraft.serial_group] ?? aircraft.serial_group})${aircraft.notes ? `; ${aircraft.notes}` : ""}.`
-    : "No tail number was given.";
+  const serialLine = !serial
+    ? "No serial number was given."
+    : serial.group === "HIGH"
+      ? `The question mentions serial ${serial.serial}, which is in the SN 0173-0500 group.`
+      : `The question mentions serial ${serial.serial}, which is in SN 0001-0172; whether SB750-71-10 is incorporated is not known, so show both low-serial cases.`;
 
   blocks.push({ type: "text", text: `SOURCES\n\n${srcText}` });
 
@@ -72,7 +68,7 @@ ${s.text}`;
   }
 
   const convo = history.length ? `Earlier in this thread:\n${history.join("\n")}\n\n` : "";
-  blocks.push({ type: "text", text: `${convo}${tailLine}\n\nQUESTION: ${question}` });
+  blocks.push({ type: "text", text: `${convo}${serialLine}\n\nQUESTION: ${question}` });
 
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

@@ -66,17 +66,9 @@ CREATE TABLE IF NOT EXISTS questions (
   asked_at    TEXT NOT NULL,
   channel     TEXT,                          -- slack | web | mcp
   user_ref    TEXT,
-  tail        TEXT,
+  serial      TEXT,                          -- serial number typed in the question, if any
   question    TEXT NOT NULL,
   answer      TEXT,
   cited       TEXT,                          -- JSON array of page ids
   feedback    INTEGER                        -- 1 up, -1 down
-);
-
--- Fleet table so answers can name the serial group for a tail.
-CREATE TABLE IF NOT EXISTS aircraft (
-  tail        TEXT PRIMARY KEY,              -- e.g. 'N702FL'
-  serial      TEXT NOT NULL,                 -- e.g. '750-0076'
-  serial_group TEXT NOT NULL,                -- LOW (0001-0172 pre SB750-71-10) | LOW_SB (0001-0172 w/ SB750-71-10) | HIGH (0173-0500)
-  notes       TEXT                           -- e.g. 'SB750-34-59 incorporated (S44 applies)'
 );

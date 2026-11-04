@@ -7,7 +7,7 @@ import { retrieve } from "./retrieve";
 const TOOLS = [
   {
     name: "ask_jeeves",
-    description: "Ask the Merci Jets Citation X document library (AFM incl. all live Temporary Changes and Supplements, Operating Manual, company manuals, training material). Returns a cited answer with page references. Include a tail number or serial number when it matters; serial-group differences are always shown.",
+    description: "Ask the Merci Jets Citation X document library (AFM incl. all live Temporary Changes and Supplements, Operating Manual, company manuals, training material). Returns a cited answer with page references. Include a serial number when it matters; serial-group differences are always shown.",
     inputSchema: { type: "object", properties: { question: { type: "string" } }, required: ["question"] },
   },
   {

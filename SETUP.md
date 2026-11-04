@@ -17,7 +17,6 @@ npx wrangler d1 create jeeves                       # copy the database_id it pr
 Put that `database_id` into `worker/wrangler.toml`, then:
 ```
 npx wrangler d1 execute jeeves --remote --file=../schema.sql
-npx wrangler d1 execute jeeves --remote --file=../seed/aircraft.sql
 npx wrangler vectorize create jeeves --dimensions=768 --metric=cosine
 npx wrangler r2 bucket create jeeves-library
 ```
@@ -83,7 +82,6 @@ claude mcp add --transport http jeeves https://<your-host>/mcp --header "Authori
 Then: "Ask Jeeves for the TCAS supplement limitations." (Connecting it to claude.ai needs an OAuth sign-in in front of `/mcp`; that comes with the web portal and Cloudflare Access.)
 
 ## 8. Before crews use it
-- Confirm N702FL's SB750-71-10 status and update `seed/aircraft.sql` (re-run the d1 execute line). Add each new tail as it joins.
 - Verify and complete `evals/questions.yaml` (target 50 questions plus 10 chart reads), run it, and fix misses.
 - Chart reading stays internal until it passes the chart-read set.
 

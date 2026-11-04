@@ -24,7 +24,7 @@ async function slackApi(env: Env, method: string, payload: unknown) {
 
 async function blocksFor(env: Env, question: string, res: AskResult): Promise<any[]> {
   const blocks: any[] = [];
-  if (res.aircraft) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: `:airplane: ${res.aircraft.tail} · ${res.aircraft.serial}` }] });
+  if (res.serial) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: `:airplane: Serial ${res.serial.serial}` }] });
   // Slack section text max is 3000 chars
   for (let i = 0; i < res.text.length; i += 2900) blocks.push({ type: "section", text: { type: "mrkdwn", text: res.text.slice(i, i + 2900) } });
   if (res.sources.length) {
@@ -51,11 +51,11 @@ function friendlyError(e: unknown) {
 export async function handleCommand(env: Env, ctx: ExecutionContext, body: string): Promise<Response> {
   const p = new URLSearchParams(body);
   const question = (p.get("text") ?? "").trim();
-  if (!question) return Response.json({ response_type: "ephemeral", text: "Ask me something, e.g. `/jeeves max crosswind for takeoff`. Add a tail number (N702FL) to see the right serial group first." });
+  if (!question) return Response.json({ response_type: "ephemeral", text: "Ask me something, e.g. `/jeeves max crosswind for takeoff`. Add a serial number (e.g. SN 0350) to see which serial group applies; all groups are always shown." });
   const responseUrl = p.get("response_url")!;
   ctx.waitUntil((async () => {
     try {
-      const res = await ask(env, { question, channel: "slack", user: p.get("user_id") ?? undefined, contextText: p.get("channel_name") ?? "" });
+      const res = await ask(env, { question, channel: "slack", user: p.get("user_id") ?? undefined });
       await fetch(responseUrl, { method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ response_type: "ephemeral", replace_original: true, text: res.text.slice(0, 300), blocks: await blocksFor(env, question, res) }) });
     } catch (e) {
@@ -81,10 +81,8 @@ export async function handleEvent(env: Env, ctx: ExecutionContext, body: string,
   ctx.waitUntil((async () => {
     const placeholder = await slackApi(env, "chat.postMessage", { channel: ev.channel, thread_ts, text: ":mag: Looking that up…" });
     try {
-      // Channel name (e.g. trip-0412-n702fl) helps pick the tail.
-      const info = isMention ? await slackApi(env, "conversations.info", { channel: ev.channel }) : null;
       const history = ev.thread_ts ? await threadHistory(env, ev.channel, ev.thread_ts) : [];
-      const res = await ask(env, { question, channel: "slack", user: ev.user, contextText: `${info?.channel?.name ?? ""} ${history.join(" ")}`, history });
+      const res = await ask(env, { question, channel: "slack", user: ev.user, history });
       await slackApi(env, "chat.update", { channel: ev.channel, ts: placeholder.ts, text: res.text.slice(0, 300), blocks: await blocksFor(env, question, res) });
     } catch (e) {
       await slackApi(env, "chat.update", { channel: ev.channel, ts: placeholder.ts, text: friendlyError(e) });

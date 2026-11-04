@@ -30,7 +30,7 @@
 
 - id: serial-groups-shown
   question: "What is the maximum takeoff weight?"
-  must_mention_verify_serial: true    # no tail given and groups differ -> show all groups
+  must_mention_verify_serial: true    # no serial given and groups differ -> show all groups
   verified: false
 
 - id: not-in-library
