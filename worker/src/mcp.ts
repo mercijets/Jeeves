@@ -37,7 +37,7 @@ export async function handleMcp(env: Env, req: Request): Promise<Response> {
       try {
         if (name === "ask_jeeves") {
           const r = await ask(env, { question: String(args.question), channel: "mcp" });
-          const refs = await Promise.all(r.sources.map(async (s) => `${citeLabel(s)}: ${await pageLink(env, s)}`));
+          const refs = await Promise.all(r.sources.map(async (s) => s.imageKey ? `${citeLabel(s)}: ${await pageLink(env, s)}` : citeLabel(s)));
           return reply({ content: [{ type: "text", text: `${r.text}\n\nSources:\n${refs.join("\n")}` }] });
         }
         if (name === "search_library") {

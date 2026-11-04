@@ -29,10 +29,10 @@ async function blocksFor(env: Env, question: string, res: AskResult): Promise<an
   for (let i = 0; i < res.text.length; i += 2900) blocks.push({ type: "section", text: { type: "mrkdwn", text: res.text.slice(i, i + 2900) } });
   if (res.sources.length) {
     blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: res.sources.map(citeLabel).join("\n").slice(0, 2900) }] });
-    const buttons = await Promise.all(res.sources.slice(0, 5).map(async (s) => ({
+    const buttons = await Promise.all(res.sources.filter((s) => s.imageKey).slice(0, 5).map(async (s) => ({
       type: "button", text: { type: "plain_text", text: `View [${s.n}] p ${s.pageLabel ?? s.pageIndex + 1}`.slice(0, 75) }, url: await pageLink(env, s),
     })));
-    blocks.push({ type: "actions", elements: buttons });
+    if (buttons.length) blocks.push({ type: "actions", elements: buttons });
   }
   if (res.questionId) blocks.push({ type: "actions", elements: [
     { type: "button", text: { type: "plain_text", text: ":thumbsup: Helpful" }, action_id: "fb_up", value: String(res.questionId) },

@@ -46,7 +46,7 @@ export default {
       const { question } = await req.json<{ question: string }>();
       const r = await ask(env, { question, channel: "web" });
       return Response.json({ answer: r.text, footer: FOOTER, serial: r.serial,
-        sources: await Promise.all(r.sources.map(async (s) => ({ label: citeLabel(s), effectivity: s.effectivity, authority: s.authorityLabel, url: await pageLink(env, s) }))) });
+        sources: await Promise.all(r.sources.map(async (s) => ({ label: citeLabel(s), effectivity: s.effectivity, authority: s.authorityLabel, url: s.imageKey ? await pageLink(env, s) : null }))) });
     }
 
     if (url.pathname === "/health") {

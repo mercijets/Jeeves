@@ -72,3 +72,29 @@ CREATE TABLE IF NOT EXISTS questions (
   cited       TEXT,                          -- JSON array of page ids
   feedback    INTEGER                        -- 1 up, -1 down
 );
+
+-- Chief Pilot notes: short verified corrections/clarifications (e.g. a study aid's unit error).
+-- Retrieved alongside documents and cited; they never override FAA-approved values.
+CREATE TABLE IF NOT EXISTS notes (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  title       TEXT NOT NULL,
+  text        TEXT NOT NULL,
+  keywords    TEXT,                          -- extra search words
+  applies_to  TEXT NOT NULL DEFAULT 'All serial numbers',
+  author      TEXT NOT NULL DEFAULT 'Chief Pilot',
+  created_at  TEXT NOT NULL,
+  active      INTEGER NOT NULL DEFAULT 1
+);
+CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+  title, text, keywords, content='notes', content_rowid='id', tokenize='porter unicode61'
+);
+CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON notes BEGIN
+  INSERT INTO notes_fts(rowid, title, text, keywords) VALUES (new.id, new.title, new.text, new.keywords);
+END;
+CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON notes BEGIN
+  INSERT INTO notes_fts(notes_fts, rowid, title, text, keywords) VALUES ('delete', old.id, old.title, old.text, old.keywords);
+END;
+CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON notes BEGIN
+  INSERT INTO notes_fts(notes_fts, rowid, title, text, keywords) VALUES ('delete', old.id, old.title, old.text, old.keywords);
+  INSERT INTO notes_fts(rowid, title, text, keywords) VALUES (new.id, new.title, new.text, new.keywords);
+END;

@@ -58,5 +58,8 @@ export async function verifyPageLink(env: Env, pageId: string, exp: string, sig:
 }
 
 export function citeLabel(s: Source): string {
-  return `[${s.n}] ${s.title}${s.revision && !s.title.includes(s.revision) ? ` ${s.revision}` : ""}, p ${s.pageLabel ?? s.pageIndex + 1}`;
+  if (s.docKind === "note") return `[${s.n}] ${s.title}`;
+  const page = s.pageLabel ?? String(s.pageIndex + 1);
+  const pagePart = s.title.includes(page) ? "" : `, p ${page}`;
+  return `[${s.n}] ${s.title}${s.revision && !s.title.includes(s.revision) ? ` ${s.revision}` : ""}${pagePart}`;
 }

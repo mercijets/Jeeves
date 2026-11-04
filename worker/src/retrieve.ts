@@ -80,6 +80,19 @@ export async function retrieve(env: Env, question: string, opts: { access: strin
     }
   }
 
+  // 5) Chief Pilot notes that match the question (verified corrections / clarifications).
+  if (fq) {
+    const notes = await env.DB.prepare(
+      `SELECT n.id, n.title, n.text, n.applies_to, n.author FROM notes_fts f JOIN notes n ON n.id = f.rowid
+       WHERE notes_fts MATCH ?1 AND n.active = 1 ORDER BY rank LIMIT 3`).bind(fq).all<any>().catch(() => ({ results: [] as any[] }));
+    for (const x of notes.results) top.push({
+      n: 0, chunkId: `note:${x.id}`, pageId: `note:${x.id}`, driveId: `note:${x.id}`, title: `Chief Pilot note: ${x.title}`,
+      revision: null, authority: 3, authorityLabel: `Merci Jets Chief Pilot note (${x.author})`, effectivity: x.applies_to,
+      serialGroups: [], pageLabel: null, pageIndex: 0, hasFigure: false, imageKey: null, docKind: "note", text: x.text,
+      access: "all", family: "Notes",
+    } as Row);
+  }
+
   return top.map((s, i) => ({ ...s, n: i + 1 }));
 }
 

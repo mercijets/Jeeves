@@ -17,6 +17,7 @@ npx wrangler d1 create jeeves                       # copy the database_id it pr
 Put that `database_id` into `worker/wrangler.toml`, then:
 ```
 npx wrangler d1 execute jeeves --remote --file=../schema.sql
+npx wrangler d1 execute jeeves --remote --file=../seed/notes.sql
 npx wrangler vectorize create jeeves --dimensions=768 --metric=cosine
 npx wrangler r2 bucket create jeeves-library
 ```
@@ -89,3 +90,4 @@ Then: "Ask Jeeves for the TCAS supplement limitations." (Connecting it to claude
 - New revision: drop it in the right folder, move the old one to `_Archive`. Within the hour Jeeves re-indexes it and posts to `#jeeves-updates`.
 - `_Archive` and `_Review` are never indexed.
 - Thumbs-down feedback is stored in D1 `questions`; review it weekly.
+- Chief Pilot notes (verified corrections, e.g. a study aid's unit error): add an INSERT to `seed/notes.sql` and run it, or ask Claude to add one. Jeeves cites them and uses them to explain conflicts; they never override FAA-approved values.
