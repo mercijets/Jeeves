@@ -105,7 +105,8 @@ def index_file(store: Store, src, f: dict, log) -> dict:
 
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     stmts = delete_doc_sql(did)
-    row = {"drive_id": did, "name": f["name"], "path": f["path"], "md5": f["md5"],
+    # md5 is written only after the vectors are stored, so an interrupted run retries this file.
+    row = {"drive_id": did, "name": f["name"], "path": f["path"], "md5": None,
            **{k: v for k, v in meta.row().items() if k not in ("tc_number", "tc_page")},
            "page_count": len(pages), "active": 1, "indexed_at": now}
     stmts.append(insert_sql("documents", row))
@@ -141,6 +142,7 @@ def index_file(store: Store, src, f: dict, log) -> dict:
         for m, v in zip(chunk_meta, vectors):
             vec_items.append({**m, "values": v})
         store.vectors_upsert(vec_items)
+    store.run_sql([f"UPDATE documents SET md5={sql_lit(f['md5'])} WHERE drive_id={sql_lit(did)};"])
 
     log(f"indexed {f['path']}/{f['name']}: {len(pages)} pages, {len(chunk_texts)} chunks")
     return {"title": meta.title, "revision": meta.revision, "pages": len(pages)}
