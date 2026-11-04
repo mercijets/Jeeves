@@ -80,7 +80,6 @@ ${s.text}`;
     body: JSON.stringify({
       model: env.ANSWER_MODEL,
       max_tokens: 1500,
-      temperature: 0,
       system: SYSTEM,
       messages: [{ role: "user", content: blocks }],
     }),
