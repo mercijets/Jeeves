@@ -13,7 +13,7 @@ binding = "AI"
 [[d1_databases]]
 binding = "DB"
 database_name = "jeeves"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "d82c610d-9993-464a-9a05-06bf4d56a7a7"
 
 [[vectorize]]
 binding = "VEC"
