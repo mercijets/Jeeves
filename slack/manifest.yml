@@ -1,5 +1,5 @@
 # Paste into https://api.slack.com/apps → Create New App → From an app manifest.
-# Replace jeeves.mercijets.com if you use a different hostname.
+# Uses the workers.dev hostname. If you later add jeeves.mercijets.com, update these three URLs.
 display_information:
   name: Jeeves
   description: Citation X manuals, AFM, TCs and supplements, with cited page references.
@@ -13,7 +13,7 @@ features:
     messages_tab_read_only_enabled: false
   slash_commands:
     - command: /jeeves
-      url: https://jeeves.mercijets.com/slack/commands
+      url: https://jeeves.it-230.workers.dev/slack/commands
       description: Ask the Citation X library (only you see the answer)
       usage_hint: "max crosswind takeoff SN 0350"
       should_escape: false
@@ -32,13 +32,13 @@ oauth_config:
       - im:write
 settings:
   event_subscriptions:
-    request_url: https://jeeves.mercijets.com/slack/events
+    request_url: https://jeeves.it-230.workers.dev/slack/events
     bot_events:
       - app_mention
       - message.im
   interactivity:
     is_enabled: true
-    request_url: https://jeeves.mercijets.com/slack/interactions
+    request_url: https://jeeves.it-230.workers.dev/slack/interactions
   org_deploy_enabled: false
   socket_mode_enabled: false
   token_rotation_enabled: false

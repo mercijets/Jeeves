@@ -2,10 +2,12 @@ name = "jeeves"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+preview_urls = false
 
 [vars]
 ANSWER_MODEL = "claude-sonnet-5-5"
-PUBLIC_BASE_URL = "https://jeeves.mercijets.com"   # change if you use a different hostname
+PUBLIC_BASE_URL = "https://jeeves.it-230.workers.dev"   # switch to jeeves.mercijets.com if you add a custom domain
 
 [ai]
 binding = "AI"
