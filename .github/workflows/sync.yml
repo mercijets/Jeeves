@@ -9,6 +9,10 @@ on:
         description: "Re-index every document"
         type: boolean
         default: false
+      files:
+        description: "Re-index only these files (comma-separated parts of names, e.g. S44,S45,CAE_Cockpit)"
+        type: string
+        default: ""
 
 concurrency:
   group: jeeves-sync
@@ -37,4 +41,4 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           SLACK_UPDATES_WEBHOOK: ${{ secrets.SLACK_UPDATES_WEBHOOK }}
-        run: python -m ingest.sync ${{ inputs.force && '--force' || '' }}
+        run: python -m ingest.sync ${{ inputs.force && '--force' || '' }} --files "${{ inputs.files }}"

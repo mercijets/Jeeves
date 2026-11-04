@@ -156,7 +156,7 @@ def deactivate(store: Store, drive_id: str):
                   [f"UPDATE documents SET active=0 WHERE drive_id={sql_lit(drive_id)};"])
 
 
-def run(store: Store, src, force: bool = False, log=print) -> dict:
+def run(store: Store, src, force: bool = False, match: list[str] | None = None, log=print) -> dict:
     files = src.list_files()
     known = store.known_documents()
     wanted = {f["id"]: f for f in files if should_index(f["path"], f["name"])}
@@ -164,7 +164,8 @@ def run(store: Store, src, force: bool = False, log=print) -> dict:
     added, updated, removed, failed = [], [], [], []
     for fid, f in wanted.items():
         k = known.get(fid)
-        if not force and k and k["md5"] == f["md5"] and k["active"]:
+        forced = force or any(m.lower() in f["name"].lower() for m in (match or []))
+        if not forced and k and k["md5"] == f["md5"] and k["active"]:
             continue
         try:
             info = index_file(store, src, f, log)
@@ -205,10 +206,11 @@ def main(argv=None):
     ap.add_argument("--local", help="write to a local folder instead of Cloudflare")
     ap.add_argument("--source", help="read from a local folder instead of Google Drive")
     ap.add_argument("--force", action="store_true", help="re-index everything")
+    ap.add_argument("--files", default="", help="comma-separated parts of file names to re-index")
     a = ap.parse_args(argv)
     store = LocalStore(a.local) if a.local else CloudStore()
     src = FolderSource(a.source) if a.source else DriveSource()
-    summary = run(store, src, force=a.force)
+    summary = run(store, src, force=a.force, match=[m.strip() for m in a.files.split(",") if m.strip()])
     if not a.local:
         post_slack(summary)
     sys.exit(1 if summary["failed"] else 0)

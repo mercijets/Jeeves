@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import time
 from pathlib import Path
@@ -27,7 +28,8 @@ def sql_lit(v) -> str:
         return "1" if v else "0"
     if isinstance(v, (int, float)):
         return str(v)
-    return "'" + str(v).replace("'", "''") + "'"
+    s = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", " ", str(v))
+    return "'" + s.replace("'", "''") + "'"
 
 
 def insert_sql(table: str, row: dict, replace: bool = True) -> str:
@@ -107,6 +109,7 @@ class CloudStore(Store):
 
     def __init__(self):
         import boto3  # only needed in the cloud
+        from botocore.config import Config
         e = os.environ
         self.acct = e["CF_ACCOUNT_ID"]
         self.api = f"https://api.cloudflare.com/client/v4/accounts/{self.acct}"
@@ -120,12 +123,20 @@ class CloudStore(Store):
             aws_access_key_id=e["R2_ACCESS_KEY_ID"],
             aws_secret_access_key=e["R2_SECRET_ACCESS_KEY"],
             region_name="auto",
+            config=Config(retries={"max_attempts": 10, "mode": "adaptive"}, connect_timeout=30, read_timeout=120),
         )
 
     def _post(self, path, **kw):
-        for attempt in range(5):
-            r = requests.post(self.api + path, headers={**self.h, **kw.pop("headers", {})}, timeout=120, **kw)
-            if r.status_code in (429, 500, 502, 503, 504):
+        extra = kw.pop("headers", {})
+        for attempt in range(6):
+            try:
+                r = requests.post(self.api + path, headers={**self.h, **extra}, timeout=180, **kw)
+            except (requests.ConnectionError, requests.Timeout) as e:
+                if attempt == 5:
+                    raise
+                time.sleep(2 ** attempt)
+                continue
+            if r.status_code in (408, 429, 500, 502, 503, 504):
                 time.sleep(2 ** attempt)
                 continue
             if not r.ok:
@@ -162,7 +173,14 @@ class CloudStore(Store):
             self._d1("\n".join(batch))
 
     def put_object(self, key, data, content_type):
-        self.s3.put_object(Bucket=self.bucket, Key=key, Body=data, ContentType=content_type)
+        for attempt in range(5):
+            try:
+                self.s3.put_object(Bucket=self.bucket, Key=key, Body=data, ContentType=content_type)
+                return
+            except Exception:
+                if attempt == 4:
+                    raise
+                time.sleep(2 ** attempt)
 
     def embed(self, texts):
         out = []

@@ -41,7 +41,11 @@ BOILERPLATE = re.compile(
     r"75FMA-\d{2}|75FMA--null|A[A-Z]|\(Continued Next Page\))\s*$", re.M)
 
 
+CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\ufffe\uffff]")
+
+
 def _clean(text: str) -> str:
+    text = CONTROL_RE.sub(" ", text)
     text = BOILERPLATE.sub("", text)
     text = DOT_LEADER_RE.sub(" .... ", text)
     text = re.sub(r"[ \t]+", " ", text)
