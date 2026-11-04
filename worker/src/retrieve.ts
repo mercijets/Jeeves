@@ -59,10 +59,11 @@ function expand(question: string): string {
 }
 
 const AUTHORITATIVE_SLOTS = 5;   // FAA-approved / manufacturer passages guaranteed a place
+const STUDY_SLOTS = 3;           // training/study aids (FSI, CAE, flashcards) guaranteed a place
 const CANDIDATES = 60;
 
 export async function retrieve(env: Env, question: string, opts: { access: string[]; k?: number }): Promise<Source[]> {
-  const k = opts.k ?? 9;
+  const k = opts.k ?? 10;
   const searchText = expand(question);
 
   // 1) semantic
@@ -91,10 +92,20 @@ export async function retrieve(env: Env, question: string, opts: { access: strin
   const rows = await loadChunks(env, ranked.slice(0, CANDIDATES));
   const allowed = rows.filter((r) => opts.access.includes(r.access));
 
-  // Authority-balanced pick: study aids can't crowd the AFM out. Keep fused-rank order.
+  // Balanced pick: the AFM can't be crowded out, and study-aid wording is always represented.
+  // At most 2 passages per study-aid document so one big training manual can't take every slot.
   const auth = allowed.filter((r) => r.authority <= 2).slice(0, AUTHORITATIVE_SLOTS);
-  const rest = allowed.filter((r) => !auth.includes(r)).slice(0, Math.max(0, k - auth.length));
-  const chosen = new Set([...auth, ...rest]);
+  const perDoc = new Map<string, number>();
+  const study = allowed.filter((r) => {
+    if (r.authority !== 4) return false;
+    const n = perDoc.get(r.driveId) ?? 0;
+    if (n >= 2) return false;
+    perDoc.set(r.driveId, n + 1);
+    return true;
+  }).slice(0, STUDY_SLOTS);
+  const rest = allowed.filter((r) => !auth.includes(r) && !study.includes(r) && r.authority !== 4)
+    .slice(0, Math.max(0, k - auth.length - study.length));
+  const chosen = new Set([...auth, ...study, ...rest]);
   const top = allowed.filter((r) => chosen.has(r));
 
   // Serial-group gap fill: if no authoritative passage covers the low serials (0001-0172),
