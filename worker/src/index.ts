@@ -51,7 +51,12 @@ export default {
 
     if (url.pathname === "/health") {
       const n = await env.DB.prepare("SELECT count(*) n, max(indexed_at) last FROM documents WHERE active=1").first<any>();
-      return Response.json({ ok: true, documents: n?.n, last_indexed: n?.last });
+      // Key check without revealing the key: length, expected prefix, and an 8-char SHA-256 fingerprint.
+      const k = env.ANTHROPIC_API_KEY ?? "";
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(k));
+      const fp = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 8);
+      return Response.json({ ok: true, documents: n?.n, last_indexed: n?.last,
+        anthropic_key: { set: k.length > 0, length: k.length, starts_sk_ant: k.startsWith("sk-ant-"), fingerprint: fp } });
     }
     return new Response("Jeeves", { status: 200 });
   },
