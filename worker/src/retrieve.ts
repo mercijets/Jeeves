@@ -51,6 +51,8 @@ const SYNONYMS: [RegExp, string][] = [
   [/\bicing\b|\banti-?ice\b/i, "anti-ice systems icing conditions limitations"],
   [/\bgear speed\b|\bvle\b|\bvlo\b/i, "landing gear operating extended speed VLO VLE"],
   [/\bflap speed\b|\bvfe\b/i, "flap extended speed VFE"],
+  [/\bmm?el\b|\binop(erative)?\b|\bdefer(red|ral)?\b|\bdispatch with\b|\bgo with\b|\bbroken\b|\bout of service\b/i,
+    "MMEL item number installed number required for dispatch remarks or exceptions (M) (O) repair category"],
 ];
 
 function expand(question: string): string {

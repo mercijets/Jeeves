@@ -94,6 +94,15 @@ def classify(path: str, name: str) -> DocMeta:
     stem = re.sub(r"\.pdf$", "", name, flags=re.I)
     top = path.split("/", 1)[0] if path else ""
 
+    # ---------- FAA MMEL (any folder): master list, never an operator MEL ----------
+    if re.search(r"(?<![A-Z])MMEL(?![A-Z])", name.upper().replace("_", " ").replace("-", " ")):
+        rev = _rev(stem) or _mmel_rev(stem)
+        return DocMeta(family="MMEL CE-750", doc_kind="mmel",
+                       title="FAA Master Minimum Equipment List (MMEL) CE-750 - master list, not an operator MEL",
+                       authority=1, authority_label="FAA Approved (MMEL: not dispatch authority by itself)",
+                       revision=rev, rev_date=_date(name), effectivity="All CE-750 serials (check item provisos)",
+                       serial_groups=ALL_GROUPS, access="all")
+
     # ---------- FAA-approved AFM 75FMA ----------
     if top.startswith("01_FAA_Approved") and "75FMA" in path:
         groups = _groups_from_name(name) or AFM_75FMA_GROUPS
@@ -132,7 +141,7 @@ def classify(path: str, name: str) -> DocMeta:
     # ---------- Other FAA-approved docs (future: low-serial AFM, MEL) ----------
     if top.startswith("01_FAA_Approved"):
         groups = _groups_from_name(name) or ALL_GROUPS
-        kind = "mel" if "MEL" in name.upper() else "manual"
+        kind = "mel" if re.search(r"(?<!M)MEL", name.upper()) else "manual"
         return DocMeta(family=stem.split("_")[0], doc_kind=kind, title=stem.replace("_", " "),
                        authority=1, authority_label=AUTHORITY[1], revision=_rev(stem),
                        rev_date=_date(name), effectivity=_effectivity_text(groups, name),
@@ -175,6 +184,11 @@ def classify(path: str, name: str) -> DocMeta:
                    authority=4, authority_label=AUTHORITY[4], revision=_rev(stem),
                    rev_date=_date(name), effectivity=_effectivity_text(groups, name),
                    serial_groups=groups)
+
+
+def _mmel_rev(stem: str) -> str | None:
+    m = re.search(r"R(\d{1,2})(?!\d)", stem)
+    return f"Rev {int(m.group(1))}" if m else None
 
 
 def _rev(stem: str) -> str | None:

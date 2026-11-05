@@ -69,8 +69,8 @@ class LocalStore(Store):
         self.vec_path = self.root / "vectors.jsonl"
 
     def known_documents(self):
-        cur = self.db.execute("SELECT drive_id, md5, active FROM documents")
-        return {r[0]: {"md5": r[1], "active": r[2]} for r in cur}
+        cur = self.db.execute("SELECT drive_id, md5, active, name, path FROM documents")
+        return {r[0]: {"md5": r[1], "active": r[2], "name": r[3], "path": r[4]} for r in cur}
 
     def chunk_ids(self, drive_id):
         return [r[0] for r in self.db.execute("SELECT id FROM chunks WHERE drive_id=?", (drive_id,))]
@@ -159,8 +159,8 @@ class CloudStore(Store):
         return self._post(f"/d1/database/{self.d1}/query", json=payload)["result"]
 
     def known_documents(self):
-        rows = self._d1("SELECT drive_id, md5, active FROM documents")[0]["results"]
-        return {r["drive_id"]: {"md5": r["md5"], "active": r["active"]} for r in rows}
+        rows = self._d1("SELECT drive_id, md5, active, name, path FROM documents")[0]["results"]
+        return {r["drive_id"]: {"md5": r["md5"], "active": r["active"], "name": r["name"], "path": r["path"]} for r in rows}
 
     def chunk_ids(self, drive_id):
         rows = self._d1("SELECT id FROM chunks WHERE drive_id=?", [drive_id])[0]["results"]

@@ -3,7 +3,7 @@
     python -m ingest.sync                      # Drive -> Cloudflare (GitHub Actions)
     python -m ingest.sync --local ./out --source ./folder   # offline test
 
-Only changed files (by Drive md5) are re-indexed. Files moved to _Archive or
+Only changed files (by Drive md5, name or folder) are re-indexed. Files moved to _Archive or
 _Review, or deleted, are deactivated and their vectors removed. A summary is
 posted to Slack #jeeves-updates when SLACK_UPDATES_WEBHOOK is set.
 """
@@ -165,7 +165,9 @@ def run(store: Store, src, force: bool = False, match: list[str] | None = None, 
     for fid, f in wanted.items():
         k = known.get(fid)
         forced = force or any(m.lower() in f["name"].lower() for m in (match or []))
-        if not forced and k and k["md5"] == f["md5"] and k["active"]:
+        # A rename or move changes how a file is classified, so it counts as a change too.
+        same = k and k["md5"] == f["md5"] and k.get("name") == f["name"] and k.get("path") == f["path"]
+        if not forced and same and k["active"]:
             continue
         try:
             info = index_file(store, src, f, log)
